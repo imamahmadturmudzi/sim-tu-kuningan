@@ -2,18 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { auth } from "@/app/lib/firebase";
+import { signOut } from "firebase/auth";
+import { useAuthState } from "react-firebase-hooks/auth"; // Kita butuh hook ini untuk baca data user
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 export function Sidebar() {
-  // Hook ini akan membaca URL saat ini (misal: "/" atau "/surat-masuk")
   const pathname = usePathname();
+  // Membaca data user yang sedang login
+  const [user] = useAuthState(auth);
 
-  // Daftar menu agar lebih rapi dan mudah ditambah nanti
   const menuItems = [
     { name: "Beranda", path: "/" },
     { name: "Surat Masuk", path: "/surat-masuk" },
     { name: "Surat Keluar", path: "/surat-keluar" },
-    { name: "Klasifikasi", path: "/klasifikasi" }, // Kita siapkan jalurnya untuk Poin 7
+    { name: "Klasifikasi", path: "/klasifikasi" },
   ];
+
+  const handleLogout = async () => {
+    if (confirm("Apakah Anda yakin ingin keluar?")) {
+      await signOut(auth);
+    }
+  };
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
@@ -24,7 +35,6 @@ export function Sidebar() {
       
       <nav className="flex-1 px-4 space-y-1">
         {menuItems.map((item) => {
-          // Cek apakah menu ini adalah halaman yang sedang dibuka
           const isActive = pathname === item.path;
 
           return (
@@ -42,6 +52,27 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Area Profil & Logout di bawah Sidebar */}
+      {user && (
+        <div className="p-4 border-t border-slate-100 bg-slate-50 m-2 rounded-xl">
+          <div className="flex flex-col space-y-3">
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold text-slate-800 truncate">{user.displayName || "Staf TU"}</p>
+              <p className="text-xs text-slate-500 truncate">{user.email}</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Keluar
+            </Button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
