@@ -12,10 +12,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription
 } from "@/components/ui/dialog";
-import { Search } from "lucide-react";
+import { Search, Printer } from "lucide-react";
 
 export default function SuratKeputusanPage() {
-  // Kita gunakan collection baru bernama "surat_keputusan" di Firebase
   const { data: daftarSK, loading: loadingData } = useSurat("surat_keputusan");
   const { tambahSurat, hapusSurat, loading: loadingAksi } = useSuratActions("surat_keputusan");
   
@@ -23,11 +22,13 @@ export default function SuratKeputusanPage() {
   const [form, setForm] = useState({ 
     tanggal: new Date().toISOString().split("T")[0], 
     nomor: "", 
-    tentang: "", // SK menggunakan 'tentang' (bukan tujuan/pengirim)
+    tentang: "", 
   });
+  
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Menyaring data SK berdasarkan nomor atau tentang
   const filteredSK = daftarSK.filter((sk) => {
     const keyword = searchQuery.toLowerCase();
     return (
@@ -38,86 +39,118 @@ export default function SuratKeputusanPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Gunakan trik "as any" agar TypeScript tidak protes soal perbedaan kolom
-    const sukses = await tambahSurat(form as any);
+    let fileUrl = ""; 
+
+    if (file) {
+      setUploading(true);
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      const safeNomor = form.nomor.replace(/[^a-zA-Z0-9]/g, "_");
+      uploadData.append("fileName", `SK_${safeNomor}_${file.name}`);
+
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: uploadData });
+        const data = await res.json();
+        if (data.success) { fileUrl = data.link; } 
+        else { alert("Gagal mengunggah: " + data.error); setUploading(false); return; }
+      } catch (err) {
+        alert("Terjadi kesalahan jaringan."); setUploading(false); return;
+      }
+      setUploading(false);
+    }
+
+    const dataFinal = { ...form, file_url: fileUrl }; 
+    const sukses = await tambahSurat(dataFinal as any);
+    
     if (sukses) {
-      setForm({ 
-        tanggal: new Date().toISOString().split("T")[0], 
-        nomor: "", 
-        tentang: "" 
-      });
+      setForm({ tanggal: new Date().toISOString().split("T")[0], nomor: "", tentang: "" });
+      setFile(null);
       setOpen(false);
     }
   };
+
+  const handlePrint = () => { window.print(); };
   
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header & Aksi */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 animate-in fade-in duration-500 print:space-y-0 print:m-0">
+      
+      {/* KOP SURAT (Hanya Muncul Saat Dicetak) */}
+      <div className="hidden print:flex flex-col mb-6">
+        <div className="flex flex-row items-center justify-between pb-2 border-b-[3px] border-black">
+          <div className="w-20">
+            <img src="/logo-kemenag.png" alt="Logo Kemenag" className="w-full h-auto object-contain" />
+          </div>
+          <div className="flex-1 text-center font-serif text-black">
+            <h1 className="text-[15px] font-bold uppercase leading-tight">Kementerian Agama Republik Indonesia</h1>
+            <h2 className="text-[13px] font-bold uppercase leading-tight">Kantor Kementerian Agama Kabupaten Kuningan</h2>
+            <h3 className="text-[17px] font-extrabold uppercase leading-tight mt-1">Madrasah Tsanawiyah Negeri 10</h3>
+            <p className="text-xs leading-tight mt-1">Jl. Raya Desa Sangkanurip No. 04 Kec. Cigandamekar Kab. Kuningan</p>
+            <p className="text-xs leading-tight">Kuningan 45556</p>
+            <p className="text-xs leading-tight mt-0.5">https : mtsn10kuningan.sch.id &nbsp;&nbsp; E-mail : mtsn10sangkanurip@gmail.com</p>
+          </div>
+          <div className="w-20"></div>
+        </div>
+        <div className="border-b-[1px] border-black w-full mt-[2px]"></div>
+        <div className="text-center mt-5">
+          <h4 className="text-base font-bold text-black uppercase underline">Buku Agenda Surat Keputusan</h4>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Surat Keputusan (SK)</h2>
-          <p className="text-slate-500 text-sm mt-1">Kelola arsip Surat Keputusan Kepala Madrasah.</p>
+          <p className="text-slate-500 text-sm mt-1">Arsip Surat Keputusan Kepala Madrasah.</p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          {/* Area Pencarian */}
+          <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto gap-2 text-slate-700 border-slate-300 shadow-sm">
+            <Printer className="w-4 h-4" />
+            Cetak Laporan
+          </Button>
+
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-slate-400" />
             </div>
             <Input
               type="text"
-              placeholder="Cari nomor atau tentang SK..."
+              placeholder="Cari SK..."
               className="pl-10 border-slate-200 bg-white shadow-sm focus-visible:ring-teal-500 w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Tombol Tambah */}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-teal-600 hover:bg-teal-700 w-full sm:w-auto shadow-sm">
-                + Catat SK Baru
+                + Catat SK
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="print:hidden">
               <DialogHeader>
-                <DialogTitle>Input Data Surat Keputusan</DialogTitle>
-                <DialogDescription>
-                  Masukkan detail SK yang baru diterbitkan ke dalam arsip.
-                </DialogDescription>
+                <DialogTitle>Input Data SK</DialogTitle>
+                <DialogDescription>Masukkan detail SK baru beserta lampirannya.</DialogDescription>
               </DialogHeader>
               <form onSubmit={onSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label>Tanggal Ditetapkan</Label>
-                  <Input 
-                    type="date"
-                    value={form.tanggal} 
-                    onChange={(e) => setForm({...form, tanggal: e.target.value})} 
-                    required 
-                  />
+                  <Input type="date" value={form.tanggal} onChange={(e) => setForm({...form, tanggal: e.target.value})} required />
                 </div>
                 <div className="space-y-2">
                   <Label>Nomor SK</Label>
-                  <Input 
-                    placeholder="Contoh: 01/MTs.10/SK/2026"
-                    value={form.nomor} 
-                    onChange={(e) => setForm({...form, nomor: e.target.value})} 
-                    required 
-                  />
+                  <Input placeholder="Contoh: 01/MTs.10/SK/2026" value={form.nomor} onChange={(e) => setForm({...form, nomor: e.target.value})} required />
                 </div>
                 <div className="space-y-2">
                   <Label>Tentang / Perihal</Label>
-                  <Input 
-                    placeholder="Contoh: Pengangkatan Panitia Ujian"
-                    value={form.tentang} 
-                    onChange={(e) => setForm({...form, tentang: e.target.value})} 
-                    required 
-                  />
+                  <Input placeholder="Contoh: Pengangkatan Panitia Ujian" value={form.tentang} onChange={(e) => setForm({...form, tentang: e.target.value})} required />
                 </div>
-                <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={loadingAksi}>
-                  {loadingAksi ? "Menyimpan..." : "Simpan Arsip SK"}
+                <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <Label className="text-teal-700 font-semibold">Lampiran Scan SK (Opsional)</Label>
+                  <Input type="file" accept=".pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} className="bg-white cursor-pointer" />
+                </div>
+                <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={loadingAksi || uploading}>
+                  {uploading ? "Menerbangkan ke Drive..." : "Simpan Arsip SK"}
                 </Button>
               </form>
             </DialogContent>
@@ -125,36 +158,35 @@ export default function SuratKeputusanPage() {
         </div>
       </div>
 
-      {/* Area Tabel */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
-              <TableHead className="w-[120px]">Tanggal</TableHead>
-              <TableHead className="w-[200px]">Nomor SK</TableHead>
-              <TableHead>Tentang / Perihal</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none">
+        <Table className="print:w-full">
+          <TableHeader className="bg-slate-50 print:bg-transparent">
+            <TableRow className="print:border-b-2 print:border-black">
+              <TableHead className="w-[100px] print:text-black">Tanggal</TableHead>
+              <TableHead className="w-[180px] print:text-black">Nomor SK</TableHead>
+              <TableHead className="print:text-black">Tentang / Perihal</TableHead>
+              <TableHead className="text-center w-[100px] print:hidden">Lampiran</TableHead>
+              <TableHead className="text-right print:hidden">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loadingData ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-10 text-slate-400">Memuat data...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-10 text-slate-400">Memuat data...</TableCell></TableRow>
             ) : filteredSK.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-10 text-slate-500">
-                  {daftarSK.length === 0 
-                    ? "Belum ada data Surat Keputusan." 
-                    : "Pencarian tidak menemukan hasil."}
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-10 text-slate-500">Belum ada data SK.</TableCell></TableRow>
             ) : (
               filteredSK.map((sk) => (
-                <TableRow key={sk.id} className="hover:bg-slate-50 transition-colors">
-                  <TableCell className="text-slate-500 text-sm">{sk.tanggal || "-"}</TableCell>
-                  <TableCell className="font-medium text-slate-700">{sk.nomor}</TableCell>
-                  <TableCell>{sk.tentang}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => hapusSurat(sk.id)}>Hapus</Button>
+                <TableRow key={sk.id} className="hover:bg-slate-50 transition-colors print:border-b print:border-slate-300">
+                  <TableCell className="text-slate-500 text-sm print:text-black">{sk.tanggal || "-"}</TableCell>
+                  <TableCell className="font-medium text-slate-700 print:text-black">{sk.nomor}</TableCell>
+                  <TableCell className="print:text-black">{sk.tentang}</TableCell>
+                  <TableCell className="text-center print:hidden">
+                    {sk.file_url ? (
+                      <a href={sk.file_url} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-800 text-xs font-semibold">Lihat File</a>
+                    ) : <span className="text-slate-300 text-xs">-</span>}
+                  </TableCell>
+                  <TableCell className="text-right print:hidden">
+                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => hapusSurat(sk.id)}>Hapus</Button>
                   </TableCell>
                 </TableRow>
               ))

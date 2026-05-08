@@ -31,11 +31,12 @@ export async function POST(request: Request) {
       body: require("stream").Readable.from(buffer),
     };
 
-    // Proses Antar ke Google Drive
+    // Proses Antar ke Google Drive VIP (Shared Drive)
     const response = await drive.files.create({
       requestBody: fileMetadata,
       media: media,
       fields: "id, webViewLink",
+      supportsAllDrives: true, // <-- INI SANDI RAHASIANYA
     });
 
     return NextResponse.json({ 

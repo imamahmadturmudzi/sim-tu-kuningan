@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { AuthProvider } from "@/components/AuthProvider";
-import { MobileHeader } from "@/components/MobileHeader"; // <-- Ini yang baru
+import { MobileHeader } from "@/components/MobileHeader";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -26,20 +26,38 @@ export default function RootLayout({
     <html lang="id">
       <body className={`${jakarta.className} antialiased bg-slate-50 text-slate-900`}>
         <AuthProvider>
-          <div className="flex h-screen overflow-hidden pb-20 md:pb-0">
-            <Sidebar />
-            {/* Sedikit penyesuaian di area main ini agar header menempel di atas */}
-            <main className="flex-1 overflow-y-auto flex flex-col relative">
-              <MobileHeader /> {/* <-- Pasang di sini */}
-              <div className="p-4 md:p-8">
+          {/* Tambahan print:h-auto dan print:overflow-visible agar bisa nge-print berlembar-lembar */}
+          <div className="flex h-screen overflow-hidden pb-20 md:pb-0 print:h-auto print:overflow-visible print:pb-0">
+            
+            {/* Sidebar disembunyikan saat nge-print */}
+            <div className="print:hidden">
+              <Sidebar />
+            </div>
+            
+            <main className="flex-1 overflow-y-auto flex flex-col relative print:overflow-visible">
+              
+              {/* Header Mobile disembunyikan saat nge-print */}
+              <div className="print:hidden">
+                <MobileHeader />
+              </div>
+              
+              {/* Area konten utama, padding dihilangkan saat nge-print biar hemat kertas */}
+              <div className="p-4 md:p-8 print:p-0">
                 {children}
               </div>
             </main>
           </div>
-          <BottomNav />
+
+          {/* Bottom Nav disembunyikan saat nge-print */}
+          <div className="print:hidden">
+            <BottomNav />
+          </div>
         </AuthProvider>
 
-        <Toaster position="top-center" richColors />
+        {/* Notifikasi Toaster juga disembunyikan saat nge-print */}
+        <div className="print:hidden">
+          <Toaster position="top-center" richColors />
+        </div>
       </body>
     </html>
   );
