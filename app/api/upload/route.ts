@@ -39,6 +39,18 @@ export async function POST(request: Request) {
       supportsAllDrives: true, // <-- INI SANDI RAHASIANYA
     });
 
+    // Agar semua staf bisa melihat file tanpa perlu request akses
+    if (response.data.id) {
+      await drive.permissions.create({
+        fileId: response.data.id,
+        requestBody: {
+          role: "viewer",
+          type: "anyone", // Siapa saja yang punya link bisa melihat
+        },
+        supportsAllDrives: true,
+      });
+    }
+
     return NextResponse.json({ 
       success: true, 
       fileId: response.data.id,

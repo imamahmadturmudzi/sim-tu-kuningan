@@ -126,21 +126,31 @@ export default function SuratKeluarPage() {
       
       {/* KOP SURAT (Hanya Muncul Saat Dicetak) */}
       <div className="hidden print:flex flex-col mb-6">
-        <div className="flex flex-row items-center justify-between pb-2 border-b-[3px] border-black">
-          <div className="w-20">
+        <div className="flex flex-row items-center justify-between pb-2">
+          {/* Logo Kiri */}
+          <div className="w-[85px]">
             <img src="/logo-kemenag.png" alt="Logo Kemenag" className="w-full h-auto object-contain" />
           </div>
-          <div className="flex-1 text-center font-serif text-black">
-            <h1 className="text-[15px] font-bold uppercase leading-tight">Kementerian Agama Republik Indonesia</h1>
-            <h2 className="text-[13px] font-bold uppercase leading-tight">Kantor Kementerian Agama Kabupaten Kuningan</h2>
-            <h3 className="text-[17px] font-extrabold uppercase leading-tight mt-1">Madrasah Tsanawiyah Negeri 10</h3>
-            <p className="text-xs leading-tight mt-1">Jl. Raya Desa Sangkanurip No. 04 Kec. Cigandamekar Kab. Kuningan</p>
-            <p className="text-xs leading-tight">Kuningan 45556</p>
-            <p className="text-xs leading-tight mt-0.5">https : mtsn10kuningan.sch.id &nbsp;&nbsp; E-mail : mtsn10sangkanurip@gmail.com</p>
+          
+          {/* Teks Tengah - Menggunakan font-sans agar persis seperti gambar */}
+          <div className="flex-1 text-center font-sans text-black">
+            <h1 className="text-[16px] font-bold uppercase leading-tight">Kementerian Agama Republik Indonesia</h1>
+            <h2 className="text-[14px] font-bold uppercase leading-tight">Kantor Kementerian Agama Kabupaten Kuningan</h2>
+            <h3 className="text-[16px] font-bold uppercase leading-tight mt-0.5">Madrasah Tsanawiyah Negeri 10</h3>
+            <p className="text-[12px] leading-tight mt-1">Jl. Raya Desa Sangkanurip No. 04 Kec. Cigandamekar Kab. Kuningan</p>
+            <p className="text-[12px] leading-tight mt-0.5">NPSN 20278735 - NSM 121132080010 - Kode Pos 45556</p>
+            <p className="text-[12px] leading-tight mt-0.5 italic">Website : mtsn10kuningan.sch.id &nbsp;&nbsp; E-mail : mtsn10sangkanurip@gmail.com</p>
           </div>
-          <div className="w-20"></div>
+          
+          {/* Elemen Kosong Kanan (Lebar disamakan dengan logo agar teks pas di tengah) */}
+          <div className="w-[85px]"></div>
         </div>
+        
+        {/* Garis Bawah Ganda (Tebal & Tipis) */}
+        <div className="border-b-[3px] border-black w-full mt-1"></div>
         <div className="border-b-[1px] border-black w-full mt-[2px]"></div>
+
+        {/* Judul Laporan (Jangan lupa ganti sesuai halaman: Masuk / Keluar / SK) */}
         <div className="text-center mt-5">
           <h4 className="text-base font-bold text-black uppercase underline">Buku Agenda Surat Keluar</h4>
         </div>
