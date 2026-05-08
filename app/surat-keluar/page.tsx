@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { db } from "@/app/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { useSurat } from "@/app/hooks/useSurat";
 import { useSuratActions } from "@/app/hooks/useSuratActions";
 import { Button } from "@/components/ui/button";
@@ -21,14 +23,42 @@ export default function SuratKeluarPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ 
     tanggal: new Date().toISOString().split("T")[0], 
-    nomor: "", 
     tujuan: "", 
     perihal: "" 
   });
+
+  // State khusus untuk menggabungkan Nomor Surat
+  const [noUrut, setNoUrut] = useState("");
+  const [kodePilihan, setKodePilihan] = useState("");
   
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // State untuk menyimpan daftar master kode dari database
+  const [daftarKode, setDaftarKode] = useState<any[]>([]);
+
+  // Fungsi untuk mengubah angka bulan menjadi Romawi
+  const toRoman = (month: number) => {
+    const roman = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    return roman[month] || "";
+  };
+
+  // Mengambil data Master Kode Surat saat halaman dimuat
+  useEffect(() => {
+    const fetchKodeSurat = async () => {
+      try {
+        // CATATAN: Ubah "kode_surat" jika nama collection di Firebase mas bro berbeda 
+        // (misal: "master_kode" atau "klasifikasi_surat")
+        const snapshot = await getDocs(collection(db, "klasifikasi")); 
+        const kodes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setDaftarKode(kodes);
+      } catch (error) {
+        console.error("Gagal memuat master kode:", error);
+      }
+    };
+    fetchKodeSurat();
+  }, []);
   
   const filteredSurat = daftarSurat.filter((surat) => {
     const keyword = searchQuery.toLowerCase();
@@ -41,13 +71,22 @@ export default function SuratKeluarPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Gabungkan nomor urut, instansi, kode, dan tahun menjadi format resmi
+    const tgl = new Date(form.tanggal);
+    const bulanRomawi = toRoman(tgl.getMonth() + 1); // getMonth() mulai dari 0
+    const tahun = tgl.getFullYear();
+
+    // Gabungkan: Nomor/MTs.10/Kode/Bulan/Tahun
+    const nomorLengkap = `${noUrut}/MTs.10/${kodePilihan}/${bulanRomawi}/${tahun}`;
+
     let fileUrl = ""; 
 
     if (file) {
       setUploading(true);
       const uploadData = new FormData();
       uploadData.append("file", file);
-      const safeNomor = form.nomor.replace(/[^a-zA-Z0-9]/g, "_");
+      const safeNomor = nomorLengkap.replace(/[^a-zA-Z0-9]/g, "_");
       uploadData.append("fileName", `OUT_${safeNomor}_${file.name}`);
 
       try {
@@ -61,11 +100,20 @@ export default function SuratKeluarPage() {
       setUploading(false);
     }
 
-    const dataFinal = { ...form, file_url: fileUrl }; 
+    const dataFinal = { 
+      tanggal: form.tanggal,
+      nomor: nomorLengkap, // Menggunakan nomor yang sudah digabung
+      tujuan: form.tujuan,
+      perihal: form.perihal,
+      file_url: fileUrl 
+    }; 
+    
     const sukses = await tambahSurat(dataFinal as any);
     
     if (sukses) {
-      setForm({ tanggal: new Date().toISOString().split("T")[0], nomor: "", tujuan: "", perihal: "" });
+      setForm({ tanggal: new Date().toISOString().split("T")[0], tujuan: "", perihal: "" });
+      setNoUrut("");
+      setKodePilihan("");
       setFile(null); 
       setOpen(false); 
     }
@@ -139,10 +187,42 @@ export default function SuratKeluarPage() {
                   <Label>Tanggal Dikirim</Label>
                   <Input type="date" value={form.tanggal} onChange={(e) => setForm({...form, tanggal: e.target.value})} required />
                 </div>
-                <div className="space-y-2">
-                  <Label>Nomor Surat</Label>
-                  <Input placeholder="Contoh: B-123/MTs.10/..." value={form.nomor} onChange={(e) => setForm({...form, nomor: e.target.value})} required />
+                
+                {/* --- BAGIAN INPUT NOMOR SURAT YANG DIPERBAIKI --- */}
+                <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <Label>Format Nomor Surat</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="No. Urut (Cth: 123)" 
+                      value={noUrut} 
+                      onChange={(e) => setNoUrut(e.target.value)} 
+                      required 
+                      className="w-1/3 bg-white"
+                    />
+                    <select
+                      className="flex h-10 w-2/3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                      value={kodePilihan}
+                      onChange={(e) => setKodePilihan(e.target.value)}
+                      required
+                    >
+                      <option value="" disabled>-- Pilih Kode Klasifikasi --</option>
+                      {daftarKode.map((k) => (
+                        <option key={k.id} value={k.kode}>
+                          {/* Kode ini akan mencoba mencari field 'keterangan', jika tidak ada coba 'nama', 
+                              jika tidak ada coba 'deskripsi', dst. */}
+                          {k.kode} - {k.keterangan || k.nama || k.deskripsi || k.uraian || "Tanpa Keterangan"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Preview: <span className="font-mono text-teal-700 font-bold">
+                      {noUrut || "..."}/MTs.10/{kodePilihan || "..."}/{toRoman(new Date(form.tanggal).getMonth() + 1)}/{new Date(form.tanggal).getFullYear()}
+                    </span>
+                  </p>
                 </div>
+                {/* ----------------------------------------------- */}
+
                 <div className="space-y-2">
                   <Label>Instansi Tujuan</Label>
                   <Input placeholder="Contoh: Kemenag Kabupaten" value={form.tujuan} onChange={(e) => setForm({...form, tujuan: e.target.value})} required />
