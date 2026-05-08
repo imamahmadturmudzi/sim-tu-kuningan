@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Inbox, Send, FolderOpen } from "lucide-react";
+import { Home, Inbox, Send, FolderOpen, FileText } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
 
   // Daftar menu disesuaikan dengan icon
   const menuItems = [
-    { name: "Beranda", path: "/", icon: Home },
-    { name: "S. Masuk", path: "/surat-masuk", icon: Inbox },
-    { name: "S. Keluar", path: "/surat-keluar", icon: Send },
-    { name: "Klasifikasi", path: "/klasifikasi", icon: FolderOpen },
-  ];
+  { name: "Beranda", path: "/", icon: Home },
+  { name: "S. Masuk", path: "/surat-masuk", icon: Inbox },
+  { name: "S. Keluar", path: "/surat-keluar", icon: Send },
+  { name: "SK", path: "/surat-keputusan", icon: FileText }, // Ini yang baru
+  { name: "Klasif.", path: "/klasifikasi", icon: FolderOpen },
+];
 
   return (
     // md:hidden memastikan bar ini hanya muncul di HP. z-50 memastikannya selalu di paling atas.

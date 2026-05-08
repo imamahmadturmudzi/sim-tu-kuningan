@@ -4,7 +4,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
-import { AuthProvider } from "@/components/AuthProvider"; // Panggil Satpam
+import { AuthProvider } from "@/components/AuthProvider";
+import { MobileHeader } from "@/components/MobileHeader"; // <-- Ini yang baru
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -24,12 +25,15 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${jakarta.className} antialiased bg-slate-50 text-slate-900`}>
-        {/* Bungkus semuanya dengan AuthProvider */}
         <AuthProvider>
           <div className="flex h-screen overflow-hidden pb-20 md:pb-0">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto p-4 md:p-8">
-              {children}
+            {/* Sedikit penyesuaian di area main ini agar header menempel di atas */}
+            <main className="flex-1 overflow-y-auto flex flex-col relative">
+              <MobileHeader /> {/* <-- Pasang di sini */}
+              <div className="p-4 md:p-8">
+                {children}
+              </div>
             </main>
           </div>
           <BottomNav />

@@ -17,6 +17,7 @@ export function Sidebar() {
     { name: "Beranda", path: "/" },
     { name: "Surat Masuk", path: "/surat-masuk" },
     { name: "Surat Keluar", path: "/surat-keluar" },
+    { name: "Surat Keputusan", path: "/surat-keputusan" }, // Ini yang baru
     { name: "Klasifikasi", path: "/klasifikasi" },
   ];
 
@@ -28,9 +29,12 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-teal-700 tracking-tight">SIM-TU</h1>
-        <p className="text-xs text-slate-500 font-medium">MTsN 10 Kuningan</p>
+      <div className="p-6 flex items-center gap-3">
+        <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+        <div>
+          <h1 className="text-xl font-bold text-teal-700 tracking-tight leading-none">SIM-TU</h1>
+          <p className="text-[11px] text-slate-500 font-medium mt-1">MTsN 10 Kuningan</p>
+        </div>
       </div>
       
       <nav className="flex-1 px-4 space-y-1">

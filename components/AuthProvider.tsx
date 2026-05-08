@@ -37,9 +37,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-100 p-8 text-center space-y-8 animate-in fade-in zoom-in duration-500">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-extrabold text-teal-700 tracking-tight">SIM-TU</h1>
-            <p className="text-slate-500 font-medium">MTsN 10 Kuningan</p>
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <img src="/logo.png" alt="Logo MTsN 10 Kuningan" className="w-14 h-14 object-contain" />
+            <div className="text-left">
+              <h1 className="text-3xl font-extrabold text-teal-700 tracking-tight leading-none">SIM-TU</h1>
+              <p className="text-slate-500 font-medium text-sm mt-1">MTsN 10 Kuningan</p>
+            </div>
           </div>
           
           <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100">
