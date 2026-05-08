@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       await drive.permissions.create({
         fileId: response.data.id,
         requestBody: {
-          role: "viewer",
+          role: "reader",
           type: "anyone", // Siapa saja yang punya link bisa melihat
         },
         supportsAllDrives: true,
