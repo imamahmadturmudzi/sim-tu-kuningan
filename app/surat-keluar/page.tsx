@@ -72,13 +72,13 @@ export default function SuratKeluarPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Gabungkan nomor urut, instansi, kode, dan tahun menjadi format resmi
+    // Menggunakan angka biasa (dengan padStart agar 01, 02, dst)
     const tgl = new Date(form.tanggal);
-    const bulanRomawi = toRoman(tgl.getMonth() + 1); // getMonth() mulai dari 0
+    const bulan = (tgl.getMonth() + 1).toString().padStart(2, '0'); 
     const tahun = tgl.getFullYear();
 
-    // Gabungkan: Nomor/MTs.10/Kode/Bulan/Tahun
-    const nomorLengkap = `${noUrut}/MTs.10/${kodePilihan}/${bulanRomawi}/${tahun}`;
+    // Format: Nomor/MTs.10/Kode/Bulan/Tahun
+    const nomorLengkap = `${noUrut}/MTs.10/${kodePilihan}/${bulan}/${tahun}`;
 
     let fileUrl = ""; 
 
@@ -227,7 +227,7 @@ export default function SuratKeluarPage() {
                   </div>
                   <p className="text-[11px] text-slate-500">
                     Preview: <span className="font-mono text-teal-700 font-bold">
-                      {noUrut || "..."}/MTs.10/{kodePilihan || "..."}/{toRoman(new Date(form.tanggal).getMonth() + 1)}/{new Date(form.tanggal).getFullYear()}
+                      {noUrut || "..."}/MTs.10/{kodePilihan || "..."}/{(new Date(form.tanggal).getMonth() + 1).toString().padStart(2, '0')}/{new Date(form.tanggal).getFullYear()}
                     </span>
                   </p>
                 </div>
