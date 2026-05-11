@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { db } from "@/app/lib/firebase";
-import { collection, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { toast } from "sonner";
-import { Surat } from "@/app/types";
+// Pastikan path ke tipe Surat disesuaikan jika mas bro punya file types.ts
+// import { Surat } from "@/app/types"; 
 
 export function useSuratActions(collectionName: string) {
   const [loading, setLoading] = useState(false);
 
-  const tambahSurat = async (data: Omit<Surat, "id" | "createdAt">) => {
+  const tambahSurat = async (data: any) => {
     setLoading(true);
     try {
       await addDoc(collection(db, collectionName), {
@@ -25,14 +26,32 @@ export function useSuratActions(collectionName: string) {
   };
 
   const hapusSurat = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
+    if (!confirm("Apakah Anda yakin ingin menghapus data ini? (File di Google Drive tidak akan terhapus otomatis)")) return false;
     try {
       await deleteDoc(doc(db, collectionName, id));
-      toast.success("Terhapus", { description: "Data telah dihapus dari server." });
+      toast.success("Terhapus", { description: "Data telah dihapus dari sistem." });
+      return true;
     } catch (error) {
-      toast.error("Gagal menghapus");
+      toast.error("Gagal menghapus data.");
+      return false;
     }
   };
 
-  return { tambahSurat, hapusSurat, loading };
+  // --- FITUR BARU: EDIT SURAT ---
+  const editSurat = async (id: string, dataBaru: any) => {
+    setLoading(true);
+    try {
+      const docRef = doc(db, collectionName, id);
+      await updateDoc(docRef, dataBaru);
+      toast.success("Diperbarui!", { description: "Perubahan data berhasil disimpan." });
+      return true;
+    } catch (error) {
+      toast.error("Gagal Update!", { description: "Terjadi kesalahan saat mengedit data." });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { tambahSurat, hapusSurat, editSurat, loading };
 }
