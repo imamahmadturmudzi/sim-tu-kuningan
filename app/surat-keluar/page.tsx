@@ -12,47 +12,52 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
-import { Search, Printer, Edit, Filter } from "lucide-react";
+import { Search, Printer, Edit, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
-// Daftar Pilihan Jenis Surat
 const PILIHAN_JENIS = ["Biasa", "Undangan", "Permohonan", "Pemberitahuan", "Keputusan", "Tugas", "Lainnya"];
+const ITEMS_PER_PAGE = 10;
 
 export default function SuratKeluarPage() {
   const { data: daftarSurat, loading: loadingData } = useSurat("surat_keluar");
   const { tambahSurat, hapusSurat, editSurat, loading: loadingAksi } = useSuratActions("surat_keluar");
   
-  // State Form Tambah Data
+  // State Form
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ 
     tanggal: new Date().toISOString().split("T")[0], 
     tujuan: "", 
     perihal: "",
-    jenis: "Biasa" // Field Baru: Jenis Surat
+    jenis: "Biasa",
+    petugas: "" 
   });
 
-  // State Form Edit Data
   const [openEdit, setOpenEdit] = useState(false);
-  const [editForm, setEditForm] = useState({ id: "", tanggal: "", nomor: "", tujuan: "", perihal: "", jenis: "", file_url: "" });
+  const [editForm, setEditForm] = useState({ id: "", tanggal: "", nomor: "", tujuan: "", perihal: "", jenis: "", petugas: "", file_url: "" });
   const [editFile, setEditFile] = useState<File | null>(null);
 
-  // State Nomor Surat & Dropdown Pencarian
+  // State Nomor & Dropdown
   const [noUrut, setNoUrut] = useState("");
   const [kodePilihan, setKodePilihan] = useState("");
   const [kodeSearch, setKodeSearch] = useState("");
   const [showKodeDropdown, setShowKodeDropdown] = useState(false);
   const [daftarKode, setDaftarKode] = useState<any[]>([]);
   
-  // State File & Upload
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   
-  // State Filter & Pencarian
+  // State Pencarian, Filter & Pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [filterJenis, setFilterJenis] = useState("Semua");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Load Master Kode Surat
+  // State Cetak Laporan Cerdas
+  const [openCetak, setOpenCetak] = useState(false);
+  const [modeCetak, setModeCetak] = useState("semua"); // semua, tahunan, bulanan
+  const [tahunCetak, setTahunCetak] = useState(new Date().getFullYear().toString());
+  const [bulanCetak, setBulanCetak] = useState(`${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}`);
+
   useEffect(() => {
     const fetchKodeSurat = async () => {
       try {
@@ -65,19 +70,54 @@ export default function SuratKeluarPage() {
     };
     fetchKodeSurat();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterJenis]);
   
-  // Logika Filter Berlapis (Search + Kategori Jenis)
-  const filteredSurat = daftarSurat.filter((surat) => {
-    const keyword = searchQuery.toLowerCase();
-    const matchCari = surat.nomor?.toLowerCase().includes(keyword) || 
-                      surat.tujuan?.toLowerCase().includes(keyword) || 
-                      surat.perihal?.toLowerCase().includes(keyword);
-    const matchJenis = filterJenis === "Semua" || surat.jenis === filterJenis;
+  // LOGIKA FILTER & AUTO-SORT
+  const sortedAndFilteredSurat = daftarSurat
+    .filter((surat) => {
+      const keyword = searchQuery.toLowerCase();
+      const matchCari = surat.nomor?.toLowerCase().includes(keyword) || 
+                        surat.tujuan?.toLowerCase().includes(keyword) || 
+                        surat.perihal?.toLowerCase().includes(keyword) ||
+                        surat.petugas?.toLowerCase().includes(keyword);
+      const matchJenis = filterJenis === "Semua" || surat.jenis === filterJenis;
+      return matchCari && matchJenis;
+    })
+    .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+
+  // LOGIKA PAGINATION
+  const totalPages = Math.ceil(sortedAndFilteredSurat.length / ITEMS_PER_PAGE);
+  const paginatedSurat = sortedAndFilteredSurat.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE, 
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // LOGIKA FILTER CETAK CERDAS
+  const dataSiapCetak = sortedAndFilteredSurat.filter(s => {
+    if (modeCetak === "semua") return true;
+    const tgl = new Date(s.tanggal);
+    if (isNaN(tgl.getTime())) return true;
     
-    return matchCari && matchJenis;
+    if (modeCetak === "tahunan") return tgl.getFullYear().toString() === tahunCetak;
+    if (modeCetak === "bulanan") {
+      const bCetak = new Date(bulanCetak);
+      return tgl.getFullYear() === bCetak.getFullYear() && tgl.getMonth() === bCetak.getMonth();
+    }
+    return true;
   });
 
-  // Proses Upload ke Drive (Dipakai oleh Tambah & Edit)
+  const judulCetak = modeCetak === "semua" ? "Seluruh Periode" : 
+                     modeCetak === "tahunan" ? `Tahun ${tahunCetak}` : 
+                     `Bulan ${new Date(bulanCetak).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+
+  const eksekusiCetak = () => {
+    setOpenCetak(false);
+    setTimeout(() => window.print(), 300);
+  };
+
   const prosesUploadFile = async (fileUpload: File, formatNama: string) => {
     const uploadData = new FormData();
     uploadData.append("file", fileUpload);
@@ -93,13 +133,12 @@ export default function SuratKeluarPage() {
     }
   };
 
-  // Submit Tambah Baru
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const tgl = new Date(form.tanggal);
     const bulan = (tgl.getMonth() + 1).toString().padStart(2, '0');
     const tahun = tgl.getFullYear();
-    const nomorLengkap = `${noUrut}/MTs.10/${kodePilihan}/${bulan}/${tahun}`;
+    const nomorLengkap = `${noUrut}/MTs.10.64/${kodePilihan}/${bulan}/${tahun}`;
 
     let fileUrl = ""; 
     if (file) {
@@ -110,24 +149,26 @@ export default function SuratKeluarPage() {
       if (!fileUrl) return;
     }
 
-    const sukses = await tambahSurat({ ...form, nomor: nomorLengkap, file_url: fileUrl } as any);
+    const dataSimpan = { ...form, nomor: nomorLengkap, file_url: fileUrl };
+    if (form.jenis !== "Tugas") dataSimpan.petugas = "";
+
+    const sukses = await tambahSurat(dataSimpan as any);
     if (sukses) {
-      setForm({ tanggal: new Date().toISOString().split("T")[0], tujuan: "", perihal: "", jenis: "Biasa" });
+      setForm({ tanggal: new Date().toISOString().split("T")[0], tujuan: "", perihal: "", jenis: "Biasa", petugas: "" });
       setNoUrut(""); setKodePilihan(""); setKodeSearch(""); setFile(null); setOpen(false); 
     }
   };
 
-  // Buka Modal Edit
   const handleBukaEdit = (surat: any) => {
     setEditForm({ 
       id: surat.id, tanggal: surat.tanggal, nomor: surat.nomor, 
-      tujuan: surat.tujuan, perihal: surat.perihal, jenis: surat.jenis || "Biasa", file_url: surat.file_url || "" 
+      tujuan: surat.tujuan, perihal: surat.perihal, jenis: surat.jenis || "Biasa", 
+      petugas: surat.petugas || "", file_url: surat.file_url || "" 
     });
     setEditFile(null);
     setOpenEdit(true);
   };
 
-  // Submit Edit Data
   const onEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     let fileUrl = editForm.file_url;
@@ -141,15 +182,16 @@ export default function SuratKeluarPage() {
       fileUrl = urlBaru;
     }
 
-    const sukses = await editSurat(editForm.id, { ...editForm, file_url: fileUrl });
+    const dataUpdate = { ...editForm, file_url: fileUrl };
+    if (editForm.jenis !== "Tugas") dataUpdate.petugas = "";
+
+    const sukses = await editSurat(editForm.id, dataUpdate);
     if (sukses) {
       setOpenEdit(false);
       setEditFile(null);
     }
   };
 
-  const handlePrint = () => { window.print(); };
-  
   return (
     <div className="space-y-6 animate-in fade-in duration-500 print:space-y-0 print:m-0">
       
@@ -173,10 +215,11 @@ export default function SuratKeluarPage() {
         <div className="border-b-[1px] border-black w-full mt-[2px]"></div>
         <div className="text-center mt-5">
           <h4 className="text-base font-bold text-black uppercase underline">Buku Agenda Surat Keluar</h4>
+          <p className="text-sm font-semibold mt-1">Periode: {judulCetak}</p>
         </div>
       </div>
 
-      {/* HEADER & KONTROL (Pencarian, Filter, Tombol) */}
+      {/* HEADER & KONTROL */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 print:hidden">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Surat Keluar</h2>
@@ -184,11 +227,11 @@ export default function SuratKeluarPage() {
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-          <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto gap-2 text-slate-700 shadow-sm">
-            <Printer className="w-4 h-4" /> Cetak
+          
+          <Button onClick={() => setOpenCetak(true)} variant="outline" className="w-full sm:w-auto gap-2 text-slate-700 shadow-sm">
+            <Printer className="w-4 h-4" /> Cetak Laporan
           </Button>
 
-          {/* FILTER KATEGORI JENIS SURAT */}
           <div className="relative w-full sm:w-auto flex items-center bg-white border border-slate-200 rounded-md shadow-sm pl-3">
             <Filter className="w-4 h-4 text-slate-400" />
             <select
@@ -205,14 +248,13 @@ export default function SuratKeluarPage() {
             <Search className="absolute inset-y-0 left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
               type="text"
-              placeholder="Cari surat..."
+              placeholder="Cari surat atau petugas..."
               className="pl-10 border-slate-200 bg-white shadow-sm w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* MODAL TAMBAH SURAT */}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-teal-600 hover:bg-teal-700 w-full sm:w-auto shadow-sm">+ Catat Surat</Button>
@@ -238,14 +280,18 @@ export default function SuratKeluarPage() {
                     </select>
                   </div>
                 </div>
+
+                {form.jenis === "Tugas" && (
+                  <div className="space-y-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <Label className="text-amber-800">Nama Petugas yang Ditugaskan</Label>
+                    <Input placeholder="Contoh: Ahmad, S.Pd" value={form.petugas} onChange={(e) => setForm({...form, petugas: e.target.value})} required />
+                  </div>
+                )}
                 
-                {/* DROPDOWN KLASIFIKASI PENCARIAN (Searchable) */}
                 <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                   <Label>Format Nomor Surat</Label>
                   <div className="flex gap-2 relative">
                     <Input placeholder="No.Urut (Cth: 123)" value={noUrut} onChange={(e) => setNoUrut(e.target.value)} required className="w-1/3 bg-white" />
-                    
-                    {/* Custom Searchable Dropdown */}
                     <div className="w-2/3 relative">
                       <Input
                         placeholder="Ketik cari kode/klasifikasi..."
@@ -260,14 +306,12 @@ export default function SuratKeluarPage() {
                         <div className="absolute z-[100] mt-1 w-full max-h-48 overflow-y-auto bg-white border border-slate-300 shadow-xl rounded-md">
                           {daftarKode
                             .filter(k => {
-                              // Logika pencarian yang lebih kebal error (anti undefined)
                               const teksPencarian = `${k.kode || ""} ${k.keterangan || ""} ${k.nama || ""} ${k.deskripsi || ""} ${k.uraian || ""}`.toLowerCase();
                               return teksPencarian.includes(kodeSearch.toLowerCase());
                             })
                             .map(k => (
                               <div 
                                 key={k.id} 
-                                // RAHASIA: Gunakan onMouseDown agar dieksekusi SEBELUM onBlur!
                                 onMouseDown={(e) => {
                                   e.preventDefault(); 
                                   setKodePilihan(k.kode);
@@ -279,23 +323,13 @@ export default function SuratKeluarPage() {
                                 <span className="font-bold text-teal-700">{k.kode}</span> - {k.keterangan || k.nama || k.deskripsi || k.uraian}
                               </div>
                             ))}
-                          
-                          {/* Pesan jika pencarian tidak ditemukan */}
-                          {daftarKode.filter(k => {
-                              const teksPencarian = `${k.kode || ""} ${k.keterangan || ""} ${k.nama || ""} ${k.deskripsi || ""} ${k.uraian || ""}`.toLowerCase();
-                              return teksPencarian.includes(kodeSearch.toLowerCase());
-                            }).length === 0 && (
-                            <div className="px-3 py-3 text-sm text-slate-500 italic text-center bg-slate-50">
-                              Kode klasifikasi tidak ditemukan.
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
                   </div>
                   <p className="text-[11px] text-slate-500">
                     Preview: <span className="font-mono text-teal-700 font-bold">
-                      {noUrut || "..."}/MTs.10/{kodePilihan || "..."}/{(new Date(form.tanggal).getMonth() + 1).toString().padStart(2, '0')}/{new Date(form.tanggal).getFullYear()}
+                      {noUrut || "..."}/MTs.10.64/{kodePilihan || "..."}/{(new Date(form.tanggal).getMonth() + 1).toString().padStart(2, '0')}/{new Date(form.tanggal).getFullYear()}
                     </span>
                   </p>
                 </div>
@@ -319,12 +353,12 @@ export default function SuratKeluarPage() {
             </DialogContent>
           </Dialog>
 
-          {/* MODAL EDIT SURAT (Terpisah agar aman) */}
+          {/* MODAL EDIT */}
           <Dialog open={openEdit} onOpenChange={setOpenEdit}>
             <DialogContent className="print:hidden sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Edit Surat Keluar</DialogTitle>
-                <DialogDescription>Perbaiki data yang salah ketik. File lama tetap aman jika tidak diganti.</DialogDescription>
+                <DialogDescription>Perbaiki data yang salah ketik.</DialogDescription>
               </DialogHeader>
               <form onSubmit={onEditSubmit} className="space-y-4 pt-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -342,9 +376,16 @@ export default function SuratKeluarPage() {
                     </select>
                   </div>
                 </div>
+
+                {editForm.jenis === "Tugas" && (
+                  <div className="space-y-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <Label className="text-amber-800">Nama Petugas</Label>
+                    <Input value={editForm.petugas} onChange={(e) => setEditForm({...editForm, petugas: e.target.value})} required />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>Nomor Surat (Full)</Label>
-                  {/* Di Edit, user bisa ubah full nomor manual jika mau */}
                   <Input value={editForm.nomor} onChange={(e) => setEditForm({...editForm, nomor: e.target.value})} required />
                 </div>
                 <div className="space-y-2">
@@ -365,46 +406,96 @@ export default function SuratKeluarPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* MODAL PILIH CETAK CERDAS */}
+          <Dialog open={openCetak} onOpenChange={setOpenCetak}>
+            <DialogContent className="print:hidden sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Filter Cetak Laporan Keluar</DialogTitle>
+                <DialogDescription>Pilih periode laporan surat keluar yang ingin dicetak.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Cetak Berdasarkan</Label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none"
+                    value={modeCetak} onChange={(e) => setModeCetak(e.target.value)}
+                  >
+                    <option value="semua">Keseluruhan (Semua Waktu)</option>
+                    <option value="tahunan">Tahunan</option>
+                    <option value="bulanan">Bulanan</option>
+                  </select>
+                </div>
+
+                {modeCetak === "tahunan" && (
+                  <div className="space-y-2">
+                    <Label>Pilih Tahun</Label>
+                    <Input type="number" value={tahunCetak} onChange={(e) => setTahunCetak(e.target.value)} />
+                  </div>
+                )}
+
+                {modeCetak === "bulanan" && (
+                  <div className="space-y-2">
+                    <Label>Pilih Bulan</Label>
+                    <Input type="month" value={bulanCetak} onChange={(e) => setBulanCetak(e.target.value)} />
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setOpenCetak(false)}>Batal</Button>
+                <Button onClick={eksekusiCetak} className="bg-slate-800 hover:bg-slate-900 gap-2">
+                  <Printer className="w-4 h-4" /> Lanjutkan Cetak
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </div>
       </div>
 
-      {/* TABEL DATA */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none">
-        <Table className="print:w-full">
-          <TableHeader className="bg-slate-50 print:bg-transparent">
-            <TableRow className="print:border-b-2 print:border-black">
-              <TableHead className="w-[100px] print:text-black">Tanggal</TableHead>
-              <TableHead className="w-[180px] print:text-black">Nomor & Jenis</TableHead>
-              <TableHead className="print:text-black">Tujuan</TableHead>
-              <TableHead className="print:text-black">Perihal</TableHead>
-              <TableHead className="text-center w-[90px] print:hidden">File</TableHead>
-              <TableHead className="text-right w-[150px] print:hidden">Aksi</TableHead>
+      {/* TABEL DATA INTERAKTIF (Untuk Layar) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:hidden">
+        <Table>
+          <TableHeader className="bg-slate-50">
+            <TableRow>
+              <TableHead className="w-[100px]">Tanggal</TableHead>
+              <TableHead className="w-[150px]">Nomor & Jenis</TableHead>
+              <TableHead>Tujuan</TableHead>
+              <TableHead>Perihal</TableHead>
+              <TableHead className="text-center w-[60px]">File</TableHead>
+              <TableHead className="text-right w-[100px]">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loadingData ? (
               <TableRow><TableCell colSpan={6} className="text-center py-10 text-slate-400">Memuat data...</TableCell></TableRow>
-            ) : filteredSurat.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-10 text-slate-500">Belum ada data surat yang cocok.</TableCell></TableRow>
+            ) : paginatedSurat.length === 0 ? (
+              <TableRow><TableCell colSpan={6} className="text-center py-10 text-slate-500">Belum ada data surat.</TableCell></TableRow>
             ) : (
-              filteredSurat.map((s) => (
-                <TableRow key={s.id} className="hover:bg-slate-50 transition-colors print:border-b print:border-slate-300">
-                  <TableCell className="text-slate-500 text-sm print:text-black">{s.tanggal || "-"}</TableCell>
-                  <TableCell className="print:text-black">
+              paginatedSurat.map((s) => (
+                <TableRow key={s.id} className="hover:bg-slate-50 transition-colors">
+                  <TableCell className="text-slate-500 text-sm">{s.tanggal || "-"}</TableCell>
+                  <TableCell className="max-w-[150px] break-words whitespace-normal">
                     <p className="font-medium text-slate-700">{s.nomor}</p>
-                    {/* Badge Kategori Jenis Surat */}
-                    <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded print:hidden">
+                    <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded">
                       {s.jenis || "Biasa"}
                     </span>
                   </TableCell>
-                  <TableCell className="print:text-black">{s.tujuan}</TableCell>
-                  <TableCell className="print:text-black">{s.perihal}</TableCell>
-                  <TableCell className="text-center print:hidden">
+                  <TableCell className="max-w-[130px] break-words whitespace-normal text-sm">{s.tujuan}</TableCell>
+                  <TableCell className="max-w-[160px] break-words whitespace-normal text-sm">
+                    {s.perihal}
+                    {s.jenis === "Tugas" && s.petugas && (
+                      <div className="mt-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded inline-block">
+                        Petugas: {s.petugas}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
                     {s.file_url ? (
                       <a href={s.file_url} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-800 text-xs font-semibold underline">Lihat</a>
                     ) : <span className="text-slate-300 text-xs">-</span>}
                   </TableCell>
-                  <TableCell className="text-right print:hidden">
+                  <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleBukaEdit(s)}>
                         <Edit className="h-4 w-4" />
@@ -419,7 +510,54 @@ export default function SuratKeluarPage() {
             )}
           </TableBody>
         </Table>
+
+        {/* KONTROL PAGINATION */}
+        {!loadingData && sortedAndFilteredSurat.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/50">
+            <Button variant="outline" size="sm" className="gap-1 text-slate-600" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </Button>
+            <span className="text-xs sm:text-sm font-medium text-slate-500">
+              Hal {currentPage} dari {totalPages} <span className="hidden sm:inline">({sortedAndFilteredSurat.length} data)</span>
+            </span>
+            <Button variant="outline" size="sm" className="gap-1 text-slate-600" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0}>
+              Next <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* TABEL KHUSUS CETAK */}
+      <div className="hidden print:block w-full">
+        <Table className="w-full text-[12px] leading-tight">
+          <TableHeader>
+            <TableRow className="border-b-2 border-black">
+              <TableHead className="w-[90px] text-black">Tanggal</TableHead>
+              <TableHead className="w-[140px] text-black">Nomor & Jenis</TableHead>
+              <TableHead className="w-[150px] text-black">Tujuan</TableHead>
+              <TableHead className="text-black">Perihal</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {dataSiapCetak.length === 0 ? (
+              <TableRow><TableCell colSpan={4} className="text-center italic pt-4">Tidak ada data untuk periode ini.</TableCell></TableRow>
+            ) : (
+              dataSiapCetak.map((s) => (
+                <TableRow key={s.id} className="border-b border-slate-300">
+                  <TableCell className="text-black align-top">{s.tanggal || "-"}</TableCell>
+                  <TableCell className="text-black align-top break-words whitespace-normal">{s.nomor}</TableCell>
+                  <TableCell className="text-black align-top break-words whitespace-normal">{s.tujuan}</TableCell>
+                  <TableCell className="text-black align-top break-words whitespace-normal">
+                    {s.perihal}
+                    {s.jenis === "Tugas" && s.petugas && ` (Petugas: ${s.petugas})`}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
     </div>
   );
 }
