@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, Printer, Edit, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
-const PILIHAN_JENIS = ["Biasa", "Undangan", "Permohonan", "Pemberitahuan", "Keputusan", "Tugas", "Lainnya"];
+const PILIHAN_JENIS = ["Biasa", "Undangan", "Permohonan", "Pemberitahuan", "Tugas", "Lainnya"];
 const ITEMS_PER_PAGE = 10;
 
 export default function SuratMasukPage() {

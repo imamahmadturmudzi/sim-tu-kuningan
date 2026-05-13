@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, Printer, Edit, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
-const PILIHAN_JENIS = ["Biasa", "Undangan", "Permohonan", "Pemberitahuan", "Keputusan", "Tugas", "Lainnya"];
+const PILIHAN_JENIS = ["Biasa", "Undangan", "Permohonan", "Pemberitahuan", "Tugas", "Lainnya"];
 const ITEMS_PER_PAGE = 10;
 
 export default function SuratKeluarPage() {
@@ -138,7 +138,7 @@ export default function SuratKeluarPage() {
     const tgl = new Date(form.tanggal);
     const bulan = (tgl.getMonth() + 1).toString().padStart(2, '0');
     const tahun = tgl.getFullYear();
-    const nomorLengkap = `${noUrut}/MTs.10.64/${kodePilihan}/${bulan}/${tahun}`;
+    const nomorLengkap = `${noUrut}/Mts.10.64/${kodePilihan}/${bulan}/${tahun}`;
 
     let fileUrl = ""; 
     if (file) {
@@ -329,7 +329,7 @@ export default function SuratKeluarPage() {
                   </div>
                   <p className="text-[11px] text-slate-500">
                     Preview: <span className="font-mono text-teal-700 font-bold">
-                      {noUrut || "..."}/MTs.10.64/{kodePilihan || "..."}/{(new Date(form.tanggal).getMonth() + 1).toString().padStart(2, '0')}/{new Date(form.tanggal).getFullYear()}
+                      {noUrut || "..."}/Mts.10.64/{kodePilihan || "..."}/{(new Date(form.tanggal).getMonth() + 1).toString().padStart(2, '0')}/{new Date(form.tanggal).getFullYear()}
                     </span>
                   </p>
                 </div>

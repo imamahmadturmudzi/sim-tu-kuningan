@@ -17,6 +17,9 @@ export default function Home() {
   const { data: suratMasuk, count: totalMasuk } = useSurat("surat_masuk");
   const { data: suratKeluar, count: totalKeluar } = useSurat("surat_keluar");
   const { data: suratSK, count: totalSK } = useSurat("surat_keputusan");
+  
+  // --- INI DIA SAMBUNGAN BARUNYA MASBRO ---
+  const { count: totalKlasifikasi } = useSurat("klasifikasi");
 
   // --- LOGIKA PENGOLAHAN DATA GRAFIK ---
   const processChartData = () => {
@@ -56,7 +59,7 @@ export default function Home() {
   const chartData = processChartData();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Dashboard */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">
@@ -86,7 +89,7 @@ export default function Home() {
         />
         <StatsCard 
           title="Klasifikasi" 
-          value={0} // Bisa dihubungkan ke master kode nanti
+          value={totalKlasifikasi} // <-- SEKARANG MENGGUNAKAN DATA ASLI
           color="border-l-amber-500" 
         />
       </div>
